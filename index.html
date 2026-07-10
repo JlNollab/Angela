@@ -240,19 +240,37 @@ function moveNoButton(e){
   noButton.style.transform = `translate(${x}px, ${y}px)`;
 }
 
+const COUNTAPI_NAMESPACE = 're-wedding-invite-2026';
+const COUNTAPI_KEY = 'yes-count';
+
 async function getYesCount(){
   try {
-    const result = await window.storage.get('rsvp-yes-count', true);
-    return result ? parseInt(result.value, 10) || 0 : 0;
+    const res = await fetch(`https://api.countapi.xyz/get/${COUNTAPI_NAMESPACE}/${COUNTAPI_KEY}`);
+    if (!res.ok) throw new Error('count fetch failed');
+    const data = await res.json();
+    return data.value || 0;
   } catch (err) {
-    return 0;
+    console.error('Count fetch error:', err);
+    return null;
+  }
+}
+
+async function hitYesCount(){
+  try {
+    const res = await fetch(`https://api.countapi.xyz/hit/${COUNTAPI_NAMESPACE}/${COUNTAPI_KEY}`);
+    if (!res.ok) throw new Error('count hit failed');
+    const data = await res.json();
+    return data.value || null;
+  } catch (err) {
+    console.error('Count hit error:', err);
+    return null;
   }
 }
 
 async function showLiveCount(){
   const el = document.getElementById('live-count');
   const count = await getYesCount();
-  if (count > 0) {
+  if (count) {
     el.textContent = count === 1 ? '💌 1 person has said yes so far' : `💌 ${count} people have said yes so far`;
     el.style.opacity = '1';
   }
@@ -264,13 +282,10 @@ async function celebrateYes(){
   reveal.classList.add('show');
 
   const countEl = document.getElementById('rsvp-count');
-  try {
-    const current = await getYesCount();
-    const newCount = current + 1;
-    await window.storage.set('rsvp-yes-count', String(newCount), true);
+  const newCount = await hitYesCount();
+  if (newCount) {
     countEl.textContent = `You're guest #${newCount} to say yes! ✦`;
-  } catch (err) {
-    console.error('Storage error:', err);
+  } else {
     countEl.textContent = 'More details to follow soon ✦';
   }
 
