@@ -215,12 +215,13 @@
               <div class="row"><span class="label">Venue</span><span>To be announced</span></div>
               <div class="row"><span class="label">Dress code</span><span>To be announced</span></div>
             </div>
-            <p class="ps" style="margin-top:20px;">More details to follow soon ✦</p>
+            <p class="ps" id="rsvp-count" style="margin-top:20px;">Saving your RSVP…</p>
           </div>
         </div>
       </div>
     </div>
     <p class="hint">tap the envelope to open</p>
+    <p class="hint" id="live-count" style="margin-top:6px; opacity:0;"></p>
   </div>
 
 <script>
@@ -239,10 +240,39 @@ function moveNoButton(e){
   noButton.style.transform = `translate(${x}px, ${y}px)`;
 }
 
-function celebrateYes(){
+async function getYesCount(){
+  try {
+    const result = await window.storage.get('rsvp-yes-count', true);
+    return result ? parseInt(result.value, 10) || 0 : 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+async function showLiveCount(){
+  const el = document.getElementById('live-count');
+  const count = await getYesCount();
+  if (count > 0) {
+    el.textContent = count === 1 ? '💌 1 person has said yes so far' : `💌 ${count} people have said yes so far`;
+    el.style.opacity = '1';
+  }
+}
+
+async function celebrateYes(){
   document.getElementById('main-content').style.display = 'none';
   const reveal = document.getElementById('reveal');
   reveal.classList.add('show');
+
+  const countEl = document.getElementById('rsvp-count');
+  try {
+    const current = await getYesCount();
+    const newCount = current + 1;
+    await window.storage.set('rsvp-yes-count', String(newCount), true);
+    countEl.textContent = `You're guest #${newCount} to say yes! ✦`;
+  } catch (err) {
+    console.error('Storage error:', err);
+    countEl.textContent = 'More details to follow soon ✦';
+  }
 
   const duration = 6000;
   const end = Date.now() + duration;
@@ -254,6 +284,8 @@ function celebrateYes(){
     requestAnimationFrame(frame);
   })();
 }
+
+showLiveCount();
 </script>
 </body>
 </html>
